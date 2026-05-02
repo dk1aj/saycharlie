@@ -29,7 +29,7 @@ import os
 import logging
 from threading import Thread
 
-from svx_api import get_active_profile
+from svx_api import get_active_profile, get_profile_hosts, get_profile_default_tg
 
 UPLOAD_FOLDER = 'profile-uploads/'
 ALLOWED_EXTENSIONS = {'conf'}
@@ -89,10 +89,14 @@ def dashboard():
     active_profile, _ = get_active_profile()
     # get file name from the path
     profile_name = urllib.parse.unquote(os.path.basename(active_profile))
+    if profile_name.lower().endswith('.conf'):
+        profile_name = profile_name[:-5]
+    reflector_host = get_profile_hosts(active_profile)
+    active_tg = get_profile_default_tg(active_profile)
 
     return render_template('dashboard.html', buttons=settings_data['buttons'],
                            columns=settings_data['columns'], app_background=settings_data['app_background'],
-                           svx_active_profile=profile_name)
+                           svx_active_profile=profile_name, svx_reflector_host=reflector_host, svx_active_tg=active_tg)
 
 
 def category(category_uuid):
@@ -364,34 +368,4 @@ def async_restart_service():
 
 
 def update_app():
-    try:
-        # Stash local changes
-        stash_result = subprocess.run(['git', 'stash'], capture_output=True, text=True)
-        if stash_result.returncode != 0:
-            logging.error(f"Stash error: {stash_result.stderr}")
-            return jsonify({"success": False, "message": "Failed to stash local changes."}), 500
-
-        # Pull latest changes from remote
-        pull_result = subprocess.run(['git', 'pull'], capture_output=True, text=True)
-        if pull_result.returncode != 0:
-            logging.error(f"Pull error: {pull_result.stderr}")
-            return jsonify({"success": False, "message": "Failed to pull updates."}), 500
-
-        # Check if requirements.txt was updated using git diff
-        diff_result = subprocess.run(['git', 'diff', '--name-only', 'HEAD@{1}', 'HEAD'], capture_output=True, text=True)
-        if 'requirements.txt' in diff_result.stdout:
-            install_result = subprocess.run(['pip', 'install', '-r', 'requirements.txt'], capture_output=True,
-                                            text=True)
-            if install_result.returncode != 0:
-                logging.error(f"Dependency installation error: {install_result.stderr}")
-                return jsonify({"success": False, "message": "Failed to update dependencies."}), 500
-
-        # Restart the service asynchronously
-        restart_thread = Thread(target=async_restart_service)
-        restart_thread.start()
-
-        return jsonify({"success": True, "message": "App updated and restart initiated."}), 200
-
-    except Exception as e:
-        logging.error(f"An unexpected error occurred: {str(e)}")
-        return jsonify({"success": False, "message": str(e)}), 500
+    return jsonify({"success": True, "message": "Update disabled. No update was performed."}), 200

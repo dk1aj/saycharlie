@@ -5,6 +5,16 @@
         .tingle-modal-box {
             margin-top: 10px !important;
         }
+
+        .last-pressed-command {
+            background-image: repeating-linear-gradient(
+                    45deg,
+                    rgba(255, 255, 255, 0.28) 0,
+                    rgba(255, 255, 255, 0.28) 8px,
+                    rgba(0, 0, 0, 0.12) 8px,
+                    rgba(0, 0, 0, 0.12) 16px
+            );
+        }
     </style>
     <!-- Include Kioskboard script -->
     <script src="https://cdn.jsdelivr.net/npm/kioskboard@2.3.0/dist/kioskboard-aio-2.3.0.min.js"></script>
@@ -13,7 +23,14 @@
             integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO"
             crossorigin="anonymous"></script>
 {% endblock %}
-{% block heading %}📁 {{ svx_active_profile }}{% endblock %}
+{% block heading %}
+    📁 {{ svx_active_profile }}
+    {% if svx_reflector_host %}
+        <span class="ml-2 inline-flex items-center bg-green-600 text-white px-3 py-1 rounded-full text-xs sm:text-sm md:text-base break-all">
+            {{ svx_reflector_host }}{% if svx_active_tg %} - TG #{{ svx_active_tg }}{% endif %}
+        </span>
+    {% endif %}
+{% endblock %}
 {% block content %}
     <div class="flex flex-col gap-4 mb-4">
         <div class="flex items-center gap-1">
@@ -96,12 +113,10 @@
     <div class="grid grid-cols-{{ columns }} gap-4">
         <div id="lastTalker" class="bg-gray-100 border border-gray-300 p-3 rounded-md">Last Talker: Loading...</div>
         <div id="talkerTimer" class="bg-gray-100 border border-gray-300 p-3 rounded-md">Talk Duration: 0 min 0 sec</div>
-        <!-- An example of a textarea element: The keyboard type is "all", the placement is "top", and the availability of the special characters is "true". -->
-        <button class="text-white bg-gradient-to-br from-purple-600 to-blue-500 hover:bg-gradient-to-bl focus:ring-4
-    focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 font-semibold rounded-lg text-lg px-5 py-2 text-center
-    active:bg-gradient-to-br active:scale-95 active:ring-blue-800"
-                onclick="modal.open()">Send custom DTMF
-        </button>
+        <form class="flex" onsubmit="event.preventDefault(); sendDTMF(document.getElementById('directDtmf').value); document.getElementById('directDtmf').value = '';">
+            <input required id="directDtmf" class="flex-grow p-4 bg-gray-100 border border-gray-300 rounded-l-md focus:outline-none focus:ring focus:ring-blue-500" placeholder="DTMF tone">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-l-none rounded-r-md active:bg-blue-800 active:scale-95 active:ring-4 active:ring-blue-800">Send</button>
+        </form>
         <button id="pttButton"
                 class="text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:bg-gradient-to-bl focus:ring-4
                focus:outline-none focus:ring-cyan-300 dark:focus:ring-cyan-800 font-semibold rounded-lg text-lg px-5 py-2 text-center
@@ -121,13 +136,17 @@
         <!-- Display standalone buttons -->
         {% for button in buttons %}
             {% if not button.isCategory and not button.category %}
-                <button onclick="sendDTMF('{{ button.action }}')"
+                <button onclick="markLastPressedCommand(this); sendDTMF('{{ button.action }}')"
                         class="bg-[{{ button.color }}] text-[{{ button.fontColor }}] text-lg font-semibold p-2 rounded-md
                active:bg-opacity-75 active:scale-95 active:ring-2 active:ring-[{{ button.color }}]">
-                    {{ button.label }}
+                    <span class="block">{{ button.label }}</span>
+                    <span class="block text-sm font-normal opacity-80">{{ button.action }}</span>
                 </button>
             {% endif %}
         {% endfor %}
+    </div>
+    <div class="mt-6">
+        <div id="configurationButtons" class="grid grid-cols-{{ columns }} gap-4"></div>
     </div>
     <script>
         function togglePTT(button) {
@@ -173,10 +192,65 @@
                 }
             });
         }
+
+        function markLastPressedCommand(button) {
+            document.querySelectorAll('.last-pressed-command').forEach(function (pressedButton) {
+                pressedButton.classList.remove('last-pressed-command');
+            });
+            button.classList.add('last-pressed-command');
+        }
+
+        function getConfigurationLabel(profileName) {
+            return decodeURIComponent(profileName.split('/').pop()).replace(/\.conf$/i, '');
+        }
+
+        function loadConfigurationButtons() {
+            fetch('/api/profiles')
+                .then(response => response.json())
+                .then(profiles => {
+                    const container = document.getElementById('configurationButtons');
+                    container.innerHTML = '';
+                    profiles.forEach(profile => {
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.innerText = getConfigurationLabel(profile.name);
+                        button.disabled = profile.isActive;
+                        button.className = profile.isActive
+                            ? 'bg-gray-500 cursor-not-allowed text-white font-semibold text-sm py-1 px-3 rounded'
+                            : 'bg-green-600 hover:bg-green-800 text-white font-semibold text-sm py-1 px-3 rounded active:scale-95';
+                        button.addEventListener('click', function () {
+                            activateConfigurationProfile(profile.name);
+                        });
+                        container.appendChild(button);
+                    });
+                })
+                .catch(error => console.error('Error loading the profiles:', error));
+        }
+
+        function activateConfigurationProfile(profileName) {
+            fetch('/api/switch_profile', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({profile: profileName})
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Failed to switch profile: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error switching profile:', error);
+                    alert('Failed to switch profile. Please try again.');
+                });
+        }
+
+        loadConfigurationButtons();
     </script>
     <script src="{{ url_for('static', filename='js/ham-api.js') }}"></script>
     <script src="{{ url_for('static', filename='js/talker.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/modal.js') }}"></script>
     <script src="{{ url_for('static', filename='js/keyboard.js') }}"></script>
     <script src="{{ url_for('static', filename='js/peak-meter.js') }}"></script>
 {% endblock %}

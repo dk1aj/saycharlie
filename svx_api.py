@@ -277,6 +277,19 @@ def get_profile_hosts(profile_path):
     return None
 
 
+def get_profile_default_tg(profile_path):
+    config = configparser.ConfigParser(strict=False)
+    try:
+        config.read(profile_path)
+    except configparser.Error:
+        return None
+
+    if config.has_section("ReflectorLogic") and config.has_option("ReflectorLogic", "DEFAULT_TG"):
+        return config.get("ReflectorLogic", "DEFAULT_TG")
+
+    return None
+
+
 def get_svx_profiles():
     """
     List all available SVXLink profiles from the /profile-uploads directory and indicate which one is active.

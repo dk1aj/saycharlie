@@ -34,21 +34,31 @@ socket.on('update_last_talker', async (talker) => {
     try {
         // Fetch the name using the async function
         const name = await fetchName(talker_callsign);
-        const displayName = name ? ` (${name})` : ' (Name unavailable)';
 
         if (!talker['stopped']) {
-            lastTalkerElement.innerText = "Current Talker: " + talker_callsign + displayName;
+            const groupName = await getGroupName(talker['tg_number']);
+            const tgDisplay = groupName ? ` - TG #${talker['tg_number']} ${groupName}` : ` - TG #${talker['tg_number']}`;
+            const currentDisplayName = document.createElement('strong');
+            currentDisplayName.innerText = name || '###';
+            lastTalkerElement.replaceChildren(
+                document.createTextNode("Current Talker: " + talker_callsign + " "),
+                currentDisplayName,
+                document.createTextNode(tgDisplay)
+            );
             startTime = parseDateTime(talker['start_date_time']).getTime();
             startTimer();
         } else {
-            lastTalkerElement.innerText = "Previous Talker: " + talker_callsign + displayName;
+            const previousDisplayName = name ? ` ${name}` : ' ###';
+            const groupName = await getGroupName(talker['tg_number']);
+            const tgDisplay = groupName ? ` - TG #${talker['tg_number']} ${groupName}` : ` - TG #${talker['tg_number']}`;
+            lastTalkerElement.innerText = "Prev Talker: " + talker_callsign + previousDisplayName + tgDisplay;
             stopTimer();
             displayTalkDuration(talker.duration || 0);  // Display duration or reset if undefined
         }
     } catch (error) {
         console.error('Failed to fetch name:', error);
         // Handle the error by updating the UI appropriately
-        lastTalkerElement.innerText = talker['stopped'] ? "Previous Talker: " + talker_callsign + " (Failed to fetch name)" : "Current Talker: " + talker_callsign + " (Failed to fetch name)";
+        lastTalkerElement.innerText = talker['stopped'] ? "Prev Talker: " + talker_callsign + " (Failed to fetch name)" : "Current Talker: " + talker_callsign + " (Failed to fetch name)";
         if (!talker['stopped']) {
             startTimer();
         } else {
@@ -81,7 +91,7 @@ function displayTalkDuration(duration) {
     } else {
         let minutes = Math.floor(duration / 60);
         let seconds = Math.floor(duration % 60);
-        timerElement.innerText = "Last Talk Duration: " + minutes + " min " + seconds + " sec";
+        timerElement.innerText = "Duration: " + minutes + " min " + seconds + " sec";
     }
 }
 
