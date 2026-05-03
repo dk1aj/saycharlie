@@ -1,3 +1,4 @@
 .idea
 logs
 config.json
+callsign_cache.json
