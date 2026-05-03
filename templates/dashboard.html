@@ -2,6 +2,168 @@
 {% block title %}saycharlie - Dashboard{% endblock %}
 {% block extra_head %}
     <style>
+        :root {
+            --bg: #050505;
+            --surface: #111111;
+            --surface-soft: #0b0b0b;
+            --text: #f5f5f0;
+            --muted: #a3a3a3;
+            --border: rgba(255, 255, 255, 0.14);
+            --accent: #c8a96a;
+            --accent-contrast: #111111;
+            --vu-green: #3f7f4f;
+            --vu-yellow: #c8a96a;
+            --vu-red: #b65a4a;
+            --vu-green-glow: #66d184;
+            --vu-yellow-glow: #ffd36a;
+            --vu-red-glow: #ff6b5f;
+        }
+
+        body[data-theme="black"] {
+            --bg: #050505;
+            --surface: #111111;
+            --surface-soft: #0b0b0b;
+            --text: #f5f5f0;
+            --muted: #a3a3a3;
+            --border: rgba(255, 255, 255, 0.14);
+            --accent: #c8a96a;
+            --accent-contrast: #111111;
+            --vu-green: #3f7f4f;
+            --vu-yellow: #c8a96a;
+            --vu-red: #b65a4a;
+            --vu-green-glow: #66d184;
+            --vu-yellow-glow: #ffd36a;
+            --vu-red-glow: #ff6b5f;
+        }
+
+        body[data-theme="white"] {
+            --bg: #f7f7f2;
+            --surface: #ffffff;
+            --surface-soft: #ecece5;
+            --text: #111111;
+            --muted: #5f5f5f;
+            --border: rgba(0, 0, 0, 0.14);
+            --accent: #8a6f35;
+            --accent-contrast: #ffffff;
+            --vu-green: #2f6f43;
+            --vu-yellow: #9b7d33;
+            --vu-red: #9d3f36;
+            --vu-green-glow: #36b869;
+            --vu-yellow-glow: #d69f20;
+            --vu-red-glow: #e65348;
+        }
+
+        body[data-theme] {
+            background: var(--bg) !important;
+            color: var(--text);
+            transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+        }
+
+        body[data-theme] nav,
+        body[data-theme] footer,
+        body[data-theme] .tingle-modal-box {
+            background: var(--surface) !important;
+            color: var(--text);
+            border: 1px solid var(--border);
+            box-shadow: none !important;
+        }
+
+        body[data-theme] footer a,
+        body[data-theme] .text-blue-500,
+        body[data-theme] .text-green-500,
+        body[data-theme] .text-gray-500 {
+            color: var(--muted) !important;
+        }
+
+        body[data-theme] #weather-emoji,
+        body[data-theme] #lastTalker,
+        body[data-theme] #talkerTimer,
+        body[data-theme] #directDtmf {
+            background: var(--surface) !important;
+            color: var(--text) !important;
+            border-color: var(--border) !important;
+        }
+
+        body[data-theme] .homepage-meter {
+            background: var(--surface-soft) !important;
+            border: 1px solid var(--border);
+        }
+
+        body[data-theme] .homepage-meter-scale {
+            color: var(--muted);
+        }
+
+        body[data-theme] .homepage-meter-mark {
+            border-color: var(--border) !important;
+        }
+
+        body[data-theme] .homepage-meter-limit {
+            border-color: var(--accent) !important;
+        }
+
+        body[data-theme] .homepage-peak {
+            background: var(--vu-green);
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        body[data-theme] #volumeLevelRX,
+        body[data-theme] #volumeLevelTX {
+            opacity: 0.82;
+        }
+
+        body[data-theme] .homepage-action,
+        body[data-theme] #configurationButtons button:not(:disabled) {
+            background: var(--surface) !important;
+            color: var(--text) !important;
+            border: 1px solid var(--border);
+        }
+
+        body[data-theme] .homepage-action:hover,
+        body[data-theme] #configurationButtons button:not(:disabled):hover {
+            background: var(--surface-soft) !important;
+            border-color: var(--accent);
+        }
+
+        body[data-theme] .homepage-primary,
+        body[data-theme] #homepageThemeToggle {
+            background: var(--accent) !important;
+            color: var(--accent-contrast) !important;
+            border: 1px solid var(--accent);
+        }
+
+        body[data-theme] #pttButton {
+            background: var(--accent) !important;
+            color: var(--accent-contrast) !important;
+            border: 1px solid var(--accent);
+        }
+
+        body[data-theme] #configurationButtons button:disabled {
+            background: var(--surface-soft) !important;
+            color: var(--muted) !important;
+            border: 1px solid var(--border);
+        }
+
+        body[data-theme] nav a {
+            background: var(--surface-soft) !important;
+            color: var(--text) !important;
+            border: 1px solid var(--border);
+        }
+
+        body[data-theme] nav a:hover {
+            border-color: var(--accent);
+        }
+
+        body[data-theme] input::placeholder {
+            color: var(--muted);
+        }
+
+        body[data-theme] button:focus-visible,
+        body[data-theme] a:focus-visible,
+        body[data-theme] input:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
         .tingle-modal-box {
             margin-top: 10px !important;
         }
@@ -9,10 +171,10 @@
         .last-pressed-command {
             background-image: repeating-linear-gradient(
                     45deg,
-                    rgba(255, 255, 255, 0.28) 0,
-                    rgba(255, 255, 255, 0.28) 8px,
-                    rgba(0, 0, 0, 0.12) 8px,
-                    rgba(0, 0, 0, 0.12) 16px
+                    color-mix(in srgb, var(--accent), transparent 68%) 0,
+                    color-mix(in srgb, var(--accent), transparent 68%) 8px,
+                    transparent 8px,
+                    transparent 16px
             );
         }
     </style>
@@ -30,13 +192,28 @@
             {{ svx_reflector_host }}{% if svx_active_tg %} - TG #{{ svx_active_tg }}{% endif %}
         </span>
     {% endif %}
+    <button type="button" id="homepageThemeToggle" aria-label="Toggle black and white theme"
+            class="ml-2 bg-white text-black border border-black px-2 py-1 rounded text-xs sm:text-sm">
+        🌙
+    </button>
 {% endblock %}
 {% block content %}
+    <script>
+        (function () {
+            let savedTheme = 'black';
+            try {
+                savedTheme = localStorage.getItem('theme') === 'white' ? 'white' : 'black';
+            } catch (error) {
+                savedTheme = 'black';
+            }
+            document.body.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
     <div class="flex flex-col gap-4 mb-4">
         <div class="flex items-center gap-1">
             <span class="text-sm text-gray-500 shrink-0">RX</span>
-            <div class="relative w-full h-6 bg-gray-300 rounded overflow-hidden flex-grow">
-                <div class="absolute w-full h-full flex justify-between px-1 text-xs">
+            <div class="homepage-meter relative w-full h-6 bg-gray-300 rounded overflow-hidden flex-grow">
+                <div class="homepage-meter-scale absolute w-full h-full flex justify-between px-1 text-xs">
                     <span>-30</span>
                     <span>-27</span>
                     <span>-24</span>
@@ -51,21 +228,21 @@
                     <span>3</span>
                 </div>
                 <div class="absolute w-full h-full flex justify-between px-1">
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r-2 border-red-500"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-limit h-full border-r-2 border-red-500"></div>
                 </div>
                 <div id="peakLevelRX"
-                     class="absolute bg-yellow-700 opacity-80 h-full w-3 left-0 transition-all duration-100 ease-out"></div>
+                     class="homepage-peak absolute bg-yellow-700 opacity-80 h-full w-1.5 left-0 transition-all duration-100 ease-out"></div>
                 <div id="volumeLevelRX"
                      class="h-full rounded transition-all duration-100 ease-out bg-transparent"></div>
             </div>
@@ -73,8 +250,8 @@
 
         <div class="flex items-center gap-1">
             <span class="text-sm text-gray-500 shrink-0">TX</span>
-            <div class="relative w-full h-6 bg-gray-300 rounded overflow-hidden flex-grow">
-                <div class="absolute w-full h-full flex justify-between px-1 text-xs">
+            <div class="homepage-meter relative w-full h-6 bg-gray-300 rounded overflow-hidden flex-grow">
+                <div class="homepage-meter-scale absolute w-full h-full flex justify-between px-1 text-xs">
                     <span>-30</span>
                     <span>-27</span>
                     <span>-24</span>
@@ -90,21 +267,21 @@
 
                 </div>
                 <div class="absolute w-full h-full flex justify-between px-1">
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r border-black"></div>
-                    <div class="h-full border-r-2 border-red-500"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-mark h-full border-r border-black"></div>
+                    <div class="homepage-meter-limit h-full border-r-2 border-red-500"></div>
                 </div>
                 <div id="peakLevelTX"
-                     class="absolute bg-yellow-700 opacity-80 h-full w-3 left-0 transition-all duration-100 ease-out"></div>
+                     class="homepage-peak absolute bg-yellow-700 opacity-80 h-full w-1.5 left-0 transition-all duration-100 ease-out"></div>
                 <div id="volumeLevelTX"
                      class="h-full rounded transition-all duration-100 ease-out bg-transparent"></div>
             </div>
@@ -115,7 +292,7 @@
         <div id="talkerTimer" class="bg-gray-100 border border-gray-300 p-3 rounded-md">Talk Duration: 0 min 0 sec</div>
         <form class="flex" onsubmit="event.preventDefault(); sendDTMF(document.getElementById('directDtmf').value); document.getElementById('directDtmf').value = '';">
             <input required id="directDtmf" class="flex-grow p-4 bg-gray-100 border border-gray-300 rounded-l-md focus:outline-none focus:ring focus:ring-blue-500" placeholder="DTMF tone">
-            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-l-none rounded-r-md active:bg-blue-800 active:scale-95 active:ring-4 active:ring-blue-800">Send</button>
+            <button type="submit" class="homepage-primary bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-l-none rounded-r-md active:bg-blue-800 active:scale-95 active:ring-4 active:ring-blue-800">Send</button>
         </form>
         <button id="pttButton"
                 class="text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:bg-gradient-to-bl focus:ring-4
@@ -127,8 +304,8 @@
         {% for button in buttons %}
             {% if button.isCategory %}
                 <a href="category?id={{ button.id }}" data-category-label="{{ button.label }}"
-                   class="inline-flex items-center justify-center bg-[{{ button.color }}] text-[{{ button.fontColor }}] text-lg font-semibold py-2 px-5 rounded-md text-center
-          active:bg-opacity-75 active:scale-95">
+                   class="inline-flex items-center justify-center bg-[{{ button.color }}] text-[{{ button.fontColor }}] text-sm font-semibold py-1 px-3 rounded-md text-center
+          active:bg-opacity-75 active:scale-95 homepage-action">
                     {{ button.label }}
                 </a>
             {% endif %}
@@ -137,10 +314,10 @@
         {% for button in buttons %}
             {% if not button.isCategory and not button.category %}
                 <button onclick="markLastPressedCommand(this); sendDTMF('{{ button.action }}')"
-                        class="bg-[{{ button.color }}] text-[{{ button.fontColor }}] text-lg font-semibold p-2 rounded-md
-               active:bg-opacity-75 active:scale-95 active:ring-2 active:ring-[{{ button.color }}]">
+                        class="bg-[{{ button.color }}] text-[{{ button.fontColor }}] text-sm font-semibold py-1 px-3 rounded-md
+               active:bg-opacity-75 active:scale-95 active:ring-2 active:ring-[{{ button.color }}] homepage-action">
                     <span class="block">{{ button.label }}</span>
-                    <span class="block text-sm font-normal opacity-80">{{ button.action }}</span>
+                    <span class="block text-xs font-normal opacity-80">{{ button.action }}</span>
                 </button>
             {% endif %}
         {% endfor %}
@@ -245,6 +422,43 @@
                     console.error('Error switching profile:', error);
                     alert('Failed to switch profile. Please try again.');
                 });
+        }
+
+        function setHomepageTheme(theme) {
+            const resolvedTheme = theme === 'white' ? 'white' : 'black';
+            document.body.setAttribute('data-theme', resolvedTheme);
+            const themeToggle = document.getElementById('homepageThemeToggle');
+            if (themeToggle) {
+                themeToggle.setAttribute('aria-pressed', resolvedTheme === 'white' ? 'true' : 'false');
+                themeToggle.innerText = '🌙';
+            }
+        }
+
+        function loadHomepageTheme() {
+            try {
+                return localStorage.getItem('theme') === 'white' ? 'white' : 'black';
+            } catch (error) {
+                return 'black';
+            }
+        }
+
+        function saveHomepageTheme(theme) {
+            try {
+                localStorage.setItem('theme', theme === 'white' ? 'white' : 'black');
+            } catch (error) {
+                console.error('Failed to save homepage theme:', error);
+            }
+        }
+
+        const homepageThemeToggle = document.getElementById('homepageThemeToggle');
+        setHomepageTheme(loadHomepageTheme());
+        if (homepageThemeToggle) {
+            homepageThemeToggle.addEventListener('click', function () {
+                const currentTheme = document.body.getAttribute('data-theme') === 'white' ? 'white' : 'black';
+                const nextTheme = currentTheme === 'white' ? 'black' : 'white';
+                setHomepageTheme(nextTheme);
+                saveHomepageTheme(nextTheme);
+            });
         }
 
         loadConfigurationButtons();

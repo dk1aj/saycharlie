@@ -21,8 +21,10 @@
 document.addEventListener('DOMContentLoaded', function () {
     let peakLevelRX = -30; // Initialize peak level for RX
     let peakLevelTX = -30; // Initialize peak level for TX
-    let lastUpdateRX = Date.now(); // Track last update time for RX
-    let lastUpdateTX = Date.now(); // Track last update time for TX
+    let lastPeakRX = Date.now(); // Track last peak time for RX
+    let lastPeakTX = Date.now(); // Track last peak time for TX
+    let lastDecayRX = Date.now(); // Track last decay step for RX
+    let lastDecayTX = Date.now(); // Track last decay step for TX
 
     const volumeLevelRX = document.getElementById('volumeLevelRX');
     const peakLevelBarRX = document.getElementById('peakLevelRX');
@@ -30,44 +32,62 @@ document.addEventListener('DOMContentLoaded', function () {
     const peakLevelBarTX = document.getElementById('peakLevelTX');
     const minDb = -30;
     const maxDb = 3;
+    const peakHoldMs = 1000;
+    const peakFallDbPerSecond = 13.3; // PPM-style fallback: roughly 20 dB in 1.5 s
 
     function updateLevels() {
         const now = Date.now();
 
         // Update peak level decay for RX
-        if (now - lastUpdateRX > 100) {
-            peakLevelRX -= 0.5;
+        if (now - lastPeakRX >= peakHoldMs) {
+            const decayStartRX = Math.max(lastDecayRX, lastPeakRX + peakHoldMs);
+            const elapsedSecondsRX = (now - decayStartRX) / 1000;
+            peakLevelRX -= peakFallDbPerSecond * elapsedSecondsRX;
             peakLevelRX = Math.max(peakLevelRX, minDb);
-            lastUpdateRX = now;
+            lastDecayRX = now;
         }
-        let peakPercentageRX = ((peakLevelRX - minDb) / (maxDb - minDb)) * 100;
-        peakPercentageRX = Math.max(0, Math.min(peakPercentageRX, 100));
-        peakLevelBarRX.style.left = `${peakPercentageRX.toFixed(2)}%`;
+        updatePeakBar(peakLevelBarRX, peakLevelRX);
 
         // Update peak level decay for TX
-        if (now - lastUpdateTX > 100) {
-            peakLevelTX -= 0.5;
+        if (now - lastPeakTX >= peakHoldMs) {
+            const decayStartTX = Math.max(lastDecayTX, lastPeakTX + peakHoldMs);
+            const elapsedSecondsTX = (now - decayStartTX) / 1000;
+            peakLevelTX -= peakFallDbPerSecond * elapsedSecondsTX;
             peakLevelTX = Math.max(peakLevelTX, minDb);
-            lastUpdateTX = now;
+            lastDecayTX = now;
         }
-        let peakPercentageTX = ((peakLevelTX - minDb) / (maxDb - minDb)) * 100;
-        peakPercentageTX = Math.max(0, Math.min(peakPercentageTX, 100));
-        peakLevelBarTX.style.left = `${peakPercentageTX.toFixed(2)}%`;
+        updatePeakBar(peakLevelBarTX, peakLevelTX);
 
         // Call this function again on the next animation frame
         requestAnimationFrame(updateLevels);
     }
 
     function getColorForLevel(dB) {
-        if (dB <= -60) {
-            return 'Black'; // Below audible threshold
-        } else if (dB <= -18) {
-            return 'Green'; // Safe levels, low to moderate signal, background noise
+        if (dB <= -12) {
+            return 'var(--vu-green)'; // Safe level range
         } else if (dB <= -6) {
-            return 'Yellow'; // Optimal recording levels, loud but not too loud
+            return 'var(--vu-yellow)'; // Target-to-caution range
         } else {
-            return 'Red'; // Close to clipping, high risk of distortion
+            return 'var(--vu-red)'; // Hot signal, approaching clipping
         }
+    }
+
+    function getPeakColorForLevel(dB) {
+        if (dB <= -12) {
+            return 'var(--vu-green-glow)';
+        } else if (dB <= -6) {
+            return 'var(--vu-yellow-glow)';
+        } else {
+            return 'var(--vu-red-glow)';
+        }
+    }
+
+    function updatePeakBar(peakLevelBar, level) {
+        let peakPercentage = ((level - minDb) / (maxDb - minDb)) * 100;
+        peakPercentage = Math.max(0, Math.min(peakPercentage, 100));
+        peakLevelBar.style.left = `${peakPercentage.toFixed(2)}%`;
+        peakLevelBar.style.backgroundColor = getPeakColorForLevel(level);
+        peakLevelBar.style.color = getPeakColorForLevel(level);
     }
 
     socket.on('audio_level_rx', function (data) {
@@ -86,20 +106,20 @@ document.addEventListener('DOMContentLoaded', function () {
         volumeLevel.style.backgroundColor = getColorForLevel(level);
 
         if (type === 'RX') {
-            if (level > peakLevelRX || Date.now() - lastUpdateRX > 200) {
+            if (level > peakLevelRX) {
                 peakLevelRX = level;
-                lastUpdateRX = Date.now();
+                lastPeakRX = Date.now();
+                lastDecayRX = Date.now();
+                updatePeakBar(peakLevelBar, peakLevelRX);
             }
         } else if (type === 'TX') {
-            if (level > peakLevelTX || Date.now() - lastUpdateTX > 200) {
+            if (level > peakLevelTX) {
                 peakLevelTX = level;
-                lastUpdateTX = Date.now();
+                lastPeakTX = Date.now();
+                lastDecayTX = Date.now();
+                updatePeakBar(peakLevelBar, peakLevelTX);
             }
         }
-
-        let peakPercentage = ((eval(`peakLevel${type}`) - minDb) / (maxDb - minDb)) * 100;
-        peakPercentage = Math.max(0, Math.min(peakPercentage, 100));
-        peakLevelBar.style.left = `${peakPercentage.toFixed(2)}%`;
     }
 
     // Start the animation frame for peak level decay
