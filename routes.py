@@ -99,6 +99,20 @@ def dashboard():
                            svx_active_profile=profile_name, svx_reflector_host=reflector_host, svx_active_tg=active_tg)
 
 
+def display_800():
+    settings_data = load_settings()
+    active_profile, _ = get_active_profile()
+    profile_name = urllib.parse.unquote(os.path.basename(active_profile))
+    if profile_name.lower().endswith('.conf'):
+        profile_name = profile_name[:-5]
+    reflector_host = get_profile_hosts(active_profile)
+    active_tg = get_profile_default_tg(active_profile)
+
+    return render_template('display_800.html', buttons=settings_data['buttons'],
+                           app_background=settings_data['app_background'],
+                           svx_active_profile=profile_name, svx_reflector_host=reflector_host, svx_active_tg=active_tg)
+
+
 def category(category_uuid):
     settings_data = load_settings()
     category_data = settings_data['buttons']

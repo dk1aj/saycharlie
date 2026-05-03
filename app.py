@@ -19,7 +19,7 @@
 import logging
 from flask import Flask, request, jsonify, render_template
 from flask_socketio import SocketIO, emit
-from routes import dashboard, add_button, set_columns, app_background, settings, category, file_manager, edit_file, \
+from routes import dashboard, display_800, add_button, set_columns, app_background, settings, category, file_manager, edit_file, \
     delete_file, add_talk_group, update_talk_group, delete_talk_group, get_talk_groups_data, get_group_name, \
     get_buttons, system_reboot, system_shutdown, update_app, delete_button, update_button
 from threading import Thread, Event
@@ -55,6 +55,27 @@ def get_local_ip():
     finally:
         s.close()
     return IP
+
+
+def enrich_talker_history(talkers, api):
+    for talker in talkers:
+        if 'stop_date_time' in talker and isinstance(talker['stop_date_time'], str):
+            try:
+                # Use dateutil's parser to automatically detect and parse the date
+                parsed_date = parser.parse(talker['stop_date_time'])
+                formatted_date = parsed_date.strftime('%Y-%m-%d %H:%M:%S')
+                talker['stop_date_time'] = formatted_date
+            except ValueError:
+                logging.error(f"Error parsing date {talker['stop_date_time']}")
+                talker['stop_date_time'] = 'Invalid date format'  # Fallback value if parsing fails
+
+        details = api.get_ham_details(talker['callsign'])
+        talker['name'] = details.get('name', 'Not available')
+
+        # Fill tg_name based on talkgroup number found in the settings
+        talker['tg_name'] = get_group_name(talker['tg_number'])
+
+    return talkers
 
 
 def create_app():
@@ -109,6 +130,7 @@ def create_app():
     app.add_url_rule('/files', view_func=file_manager, methods=['GET', 'POST'])
     app.add_url_rule('/files/edit/<filename>', view_func=edit_file, methods=['POST'])
     app.add_url_rule('/files/delete/<filename>', view_func=delete_file, methods=['GET'])
+    app.add_url_rule('/display-800', view_func=display_800, methods=['GET'])
 
     @app.route('/api/profiles', methods=['GET'])
     def get_svx_profiles_route():
@@ -158,25 +180,13 @@ def create_app():
     @app.route('/history')
     def last_talkers():
         talkers = log_monitor.get_last_talkers()
-
-        for talker in talkers:
-            if 'stop_date_time' in talker and isinstance(talker['stop_date_time'], str):
-                try:
-                    # Use dateutil's parser to automatically detect and parse the date
-                    parsed_date = parser.parse(talker['stop_date_time'])
-                    formatted_date = parsed_date.strftime('%Y-%m-%d %H:%M:%S')
-                    talker['stop_date_time'] = formatted_date
-                except ValueError:
-                    logging.error(f"Error parsing date {talker['stop_date_time']}")
-                    talker['stop_date_time'] = 'Invalid date format'  # Fallback value if parsing fails
-
-            details = api.get_ham_details(talker['callsign'])
-            talker['name'] = details.get('name', 'Not available')
-
-            # Fill tg_name based on talkgroup number found in the settings
-            talker['tg_name'] = get_group_name(talker['tg_number'])
-
+        talkers = enrich_talker_history(talkers, api)
         return render_template('history.html', talkers=talkers)
+
+    @app.route('/api/talkers')
+    def talkers_route():
+        talkers = enrich_talker_history(log_monitor.get_last_talkers(), api)
+        return jsonify(talkers[:8])
 
     @socketio.on('connect')
     def handle_connect():

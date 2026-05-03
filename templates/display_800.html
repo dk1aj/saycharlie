@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=800, initial-scale=1.0">
+    <title>saycharlie - 800x480</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"
+            integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO"
+            crossorigin="anonymous"></script>
+    <style>
+        :root {
+            --bg: #050505;
+            --surface: #111111;
+            --surface-soft: #0b0b0b;
+            --text: #f5f5f0;
+            --muted: #a3a3a3;
+            --border: rgba(255, 255, 255, 0.14);
+            --accent: #c8a96a;
+            --accent-contrast: #111111;
+            --vu-green: #3f7f4f;
+            --vu-yellow: #c8a96a;
+            --vu-red: #b65a4a;
+            --vu-green-glow: #66d184;
+            --vu-yellow-glow: #ffd36a;
+            --vu-red-glow: #ff6b5f;
+        }
+
+        body[data-theme="white"] {
+            --bg: #f7f7f2;
+            --surface: #ffffff;
+            --surface-soft: #ecece5;
+            --text: #111111;
+            --muted: #5f5f5f;
+            --border: rgba(0, 0, 0, 0.14);
+            --accent: #8a6f35;
+            --accent-contrast: #ffffff;
+            --vu-green: #2f6f43;
+            --vu-yellow: #9b7d33;
+            --vu-red: #9d3f36;
+            --vu-green-glow: #36b869;
+            --vu-yellow-glow: #d69f20;
+            --vu-red-glow: #e65348;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
+            margin: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+            overflow: hidden;
+        }
+
+        .screen {
+            width: 800px;
+            height: 480px;
+            max-width: 100vw;
+            max-height: 100vh;
+            padding: 10px;
+            display: grid;
+            grid-template-rows: 42px 62px 1fr;
+            gap: 8px;
+            background: var(--bg);
+        }
+
+        .topbar,
+        .meter-panel,
+        .status-card,
+        .talker-card,
+        .control-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 6px 8px;
+        }
+
+        .profile {
+            min-width: 0;
+            font-size: 15px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .meta {
+            color: var(--muted);
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .icon-link,
+        .icon-button {
+            min-width: 32px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent);
+            color: var(--accent-contrast);
+            border: 1px solid var(--accent);
+            border-radius: 5px;
+            font-size: 15px;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .meter-panel {
+            display: grid;
+            gap: 6px;
+            padding: 7px 8px;
+        }
+
+        .meter-row {
+            display: grid;
+            grid-template-columns: 24px 1fr;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .meter-label {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .meter {
+            position: relative;
+            height: 20px;
+            background: var(--surface-soft);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .meter-scale,
+        .meter-marks {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 3px;
+        }
+
+        .meter-scale {
+            z-index: 2;
+            color: var(--muted);
+            font-size: 10px;
+            line-height: 19px;
+        }
+
+        .meter-mark {
+            height: 100%;
+            border-right: 1px solid var(--border);
+        }
+
+        .meter-limit {
+            height: 100%;
+            border-right: 2px solid var(--accent);
+        }
+
+        .peak {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 6px;
+            background: var(--vu-green);
+            box-shadow: 0 0 8px currentColor;
+            opacity: 0.86;
+            transition: left 100ms ease-out;
+            z-index: 3;
+        }
+
+        .volume {
+            height: 100%;
+            width: 0;
+            border-radius: 3px;
+            opacity: 0.82;
+            transition: width 100ms ease-out;
+        }
+
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 250px;
+            gap: 8px;
+            min-height: 0;
+        }
+
+        .left,
+        .right {
+            display: grid;
+            gap: 8px;
+            min-height: 0;
+        }
+
+        .left {
+            grid-template-rows: auto 1fr;
+        }
+
+        .right {
+            grid-template-rows: auto 1fr;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 150px;
+            gap: 8px;
+        }
+
+        .status-card {
+            min-height: 50px;
+            padding: 8px;
+            font-size: 14px;
+            line-height: 1.25;
+        }
+
+        .status-label {
+            display: block;
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 3px;
+        }
+
+        .button-grid {
+            min-height: 0;
+            overflow: auto;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            align-content: start;
+            gap: 6px;
+        }
+
+        .dtmf-button,
+        .category-button {
+            min-height: 38px;
+            padding: 5px 7px;
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            font-size: 13px;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .dtmf-button span {
+            display: block;
+            font-size: 10px;
+            font-weight: 400;
+            color: var(--muted);
+        }
+
+        .last-pressed-command {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+        }
+
+        .control-card {
+            padding: 8px;
+        }
+
+        .dtmf-form {
+            display: grid;
+            grid-template-columns: 1fr 58px;
+            gap: 6px;
+            margin-bottom: 7px;
+        }
+
+        .dtmf-input {
+            min-width: 0;
+            height: 36px;
+            padding: 0 8px;
+            background: var(--surface-soft);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .primary-button {
+            height: 36px;
+            background: var(--accent);
+            color: var(--accent-contrast);
+            border: 1px solid var(--accent);
+            border-radius: 5px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .ptt-button {
+            width: 100%;
+            height: 38px;
+            background: var(--accent);
+            color: var(--accent-contrast);
+            border: 1px solid var(--accent);
+            border-radius: 5px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .ptt-button:disabled {
+            background: var(--surface-soft);
+            color: var(--muted);
+            border-color: var(--border);
+            cursor: not-allowed;
+            opacity: 0.65;
+            text-decoration: line-through;
+        }
+
+        .talker-card {
+            min-height: 0;
+            padding: 8px;
+            overflow: hidden;
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 6px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .panel-head a {
+            color: var(--muted);
+            font-size: 11px;
+            text-decoration: none;
+        }
+
+        .talker-rows {
+            display: grid;
+            gap: 4px;
+            font-size: 11px;
+        }
+
+        .talker-row {
+            display: grid;
+            grid-template-columns: 52px 1fr 46px;
+            gap: 5px;
+            padding-top: 4px;
+            border-top: 1px solid var(--border);
+        }
+
+        .truncate {
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        @media (max-width: 799px), (max-height: 479px) {
+            body {
+                overflow: auto;
+            }
+
+            .screen {
+                width: 100vw;
+                height: auto;
+                min-height: 100vh;
+            }
+        }
+    </style>
+</head>
+<body data-theme="black">
+<script>
+    (function () {
+        let savedTheme = 'black';
+        try {
+            savedTheme = localStorage.getItem('theme') === 'white' ? 'white' : 'black';
+        } catch (error) {
+            savedTheme = 'black';
+        }
+        document.body.setAttribute('data-theme', savedTheme);
+    })();
+</script>
+<main class="screen">
+    <header class="topbar">
+        <div class="profile">📁 {{ svx_active_profile }}</div>
+        <div class="meta">
+            {% if svx_reflector_host %}
+                {{ svx_reflector_host }}{% if svx_active_tg %} · TG {{ svx_active_tg }}{% endif %}
+            {% endif %}
+        </div>
+        <div class="nav-actions">
+            <button type="button" id="displayThemeToggle" class="icon-button"
+                    aria-label="Toggle black and white theme">🌙</button>
+            <a href="/" class="icon-link" aria-label="Open full dashboard">⌂</a>
+        </div>
+    </header>
+
+    <section class="meter-panel" aria-label="Audio meters">
+        <div class="meter-row">
+            <span class="meter-label">RX</span>
+            <div class="meter">
+                <div class="meter-scale">
+                    <span>-30</span><span>-24</span><span>-18</span><span>-12</span><span>-6</span><span>0</span><span>3</span>
+                </div>
+                <div class="meter-marks">
+                    <div class="meter-mark"></div><div class="meter-mark"></div><div class="meter-mark"></div>
+                    <div class="meter-mark"></div><div class="meter-mark"></div><div class="meter-mark"></div>
+                    <div class="meter-limit"></div>
+                </div>
+                <div id="peakLevelRX" class="peak"></div>
+                <div id="volumeLevelRX" class="volume"></div>
+            </div>
+        </div>
+        <div class="meter-row">
+            <span class="meter-label">TX</span>
+            <div class="meter">
+                <div class="meter-scale">
+                    <span>-30</span><span>-24</span><span>-18</span><span>-12</span><span>-6</span><span>0</span><span>3</span>
+                </div>
+                <div class="meter-marks">
+                    <div class="meter-mark"></div><div class="meter-mark"></div><div class="meter-mark"></div>
+                    <div class="meter-mark"></div><div class="meter-mark"></div><div class="meter-mark"></div>
+                    <div class="meter-limit"></div>
+                </div>
+                <div id="peakLevelTX" class="peak"></div>
+                <div id="volumeLevelTX" class="volume"></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="main">
+        <div class="left">
+            <div class="status-grid">
+                <div id="lastTalker" class="status-card">
+                    <span class="status-label">Talker</span>
+                    Loading...
+                </div>
+                <div id="talkerTimer" class="status-card">
+                    <span class="status-label">Duration</span>
+                    0 min 0 sec
+                </div>
+            </div>
+
+            <div class="button-grid" aria-label="DTMF buttons">
+                {% for button in buttons %}
+                    {% if button.isCategory %}
+                        <a href="category?id={{ button.id }}" class="category-button">{{ button.label }}</a>
+                    {% endif %}
+                {% endfor %}
+                {% for button in buttons %}
+                    {% if not button.isCategory and not button.category %}
+                        <button type="button" class="dtmf-button"
+                                onclick="markLastPressedCommand(this); sendDTMF('{{ button.action }}')">
+                            {{ button.label }}
+                        </button>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <aside class="right">
+            <div class="control-card">
+                <form class="dtmf-form"
+                      onsubmit="event.preventDefault(); sendDTMF(document.getElementById('directDtmf').value); document.getElementById('directDtmf').value = '';">
+                    <input required id="directDtmf" class="dtmf-input" placeholder="DTMF">
+                    <button type="submit" class="primary-button">Send</button>
+                </form>
+                <button id="pttButton" type="button" class="ptt-button" disabled aria-disabled="true">PTT ON</button>
+            </div>
+
+            <div id="compactTalkerList" class="talker-card">
+                <div class="panel-head">
+                    <span>Recent Talkers</span>
+                    <a href="/history">All</a>
+                </div>
+                <div id="compactTalkerRows" class="talker-rows">
+                    <div class="muted">Loading...</div>
+                </div>
+            </div>
+        </aside>
+    </section>
+</main>
+
+<script src="{{ url_for('static', filename='js/ham-api.js') }}"></script>
+<script src="{{ url_for('static', filename='js/talker.js') }}"></script>
+<script src="{{ url_for('static', filename='js/peak-meter.js') }}"></script>
+<script>
+    function togglePTT(button) {
+        if (button.innerText === 'PTT ON') {
+            button.innerText = 'PTT OFF';
+            sendPTT('O');
+        } else {
+            button.innerText = 'PTT ON';
+            sendPTT('Z');
+        }
+    }
+
+    function sendPTT(ptt_code) {
+        fetch('/api/send_ptt', {
+            method: 'POST',
+            body: JSON.stringify({ptt_code: ptt_code}),
+            headers: {'Content-Type': 'application/json'}
+        }).then(async response => {
+            if (!response.ok) {
+                const data = await response.json();
+                alert('Failed to send PTT: ' + data.message);
+            }
+        });
+    }
+
+    function sendDTMF(dtmf_code) {
+        fetch('/api/send_dtmf', {
+            method: 'POST',
+            body: JSON.stringify({dtmf_code: dtmf_code}),
+            headers: {'Content-Type': 'application/json'}
+        }).then(async response => {
+            if (!response.ok) {
+                const data = await response.json();
+                alert('Failed to send DTMF: ' + data.message);
+            }
+        });
+    }
+
+    function markLastPressedCommand(button) {
+        document.querySelectorAll('.last-pressed-command').forEach(function (pressedButton) {
+            pressedButton.classList.remove('last-pressed-command');
+        });
+        button.classList.add('last-pressed-command');
+    }
+
+    let compactTalkers = [];
+
+    function formatCompactTalkerTime(value) {
+        if (!value) {
+            return '';
+        }
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+            return value;
+        }
+        return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    }
+
+    function getCompactTalkerKey(talker) {
+        return [
+            talker.stop_date_time || '',
+            talker.callsign || '',
+            talker.tg_number || ''
+        ].join('|');
+    }
+
+    function renderCompactTalkers(talkers) {
+        const rows = document.getElementById('compactTalkerRows');
+        if (!rows) {
+            return;
+        }
+        rows.innerHTML = '';
+        const visibleTalkers = talkers.slice(0, 5);
+        if (visibleTalkers.length === 0) {
+            rows.innerHTML = '<div class="muted">No talkers yet.</div>';
+            return;
+        }
+        visibleTalkers.forEach(function (talker) {
+            const row = document.createElement('div');
+            row.className = 'talker-row';
+            row.dataset.talkerKey = getCompactTalkerKey(talker);
+
+            const callsign = document.createElement('strong');
+            callsign.className = 'truncate';
+            callsign.textContent = talker.callsign || '###';
+
+            const talkGroup = document.createElement('span');
+            talkGroup.className = 'truncate muted';
+            talkGroup.textContent = `TG ${talker.tg_number || '-'}${talker.tg_name ? ' ' + talker.tg_name : ''}`;
+
+            const time = document.createElement('span');
+            time.className = 'muted';
+            time.textContent = formatCompactTalkerTime(talker.stop_date_time);
+
+            row.append(callsign, talkGroup, time);
+            rows.appendChild(row);
+        });
+    }
+
+    async function loadCompactTalkers() {
+        try {
+            const response = await fetch('/api/talkers');
+            if (!response.ok) {
+                throw new Error('Failed to load talkers');
+            }
+            compactTalkers = await response.json();
+            renderCompactTalkers(compactTalkers);
+        } catch (error) {
+            console.error('Error loading compact talkers:', error);
+        }
+    }
+
+    async function addCompactTalker(talker) {
+        if (talker.stopped !== true) {
+            return;
+        }
+        const name = typeof fetchName === 'function' ? await fetchName(talker.callsign) : '';
+        const tgName = typeof getGroupName === 'function' ? await getGroupName(talker.tg_number) : '';
+        const newTalker = {
+            ...talker,
+            name: name || 'Not available',
+            tg_name: tgName || ''
+        };
+        compactTalkers = [newTalker, ...compactTalkers]
+            .filter(function (item, index, items) {
+                return items.findIndex(function (candidate) {
+                    return getCompactTalkerKey(candidate) === getCompactTalkerKey(item);
+                }) === index;
+            })
+            .slice(0, 5);
+        renderCompactTalkers(compactTalkers);
+    }
+
+    function setDisplayTheme(theme) {
+        const resolvedTheme = theme === 'white' ? 'white' : 'black';
+        document.body.setAttribute('data-theme', resolvedTheme);
+        try {
+            localStorage.setItem('theme', resolvedTheme);
+        } catch (error) {
+            console.error('Failed to save display theme:', error);
+        }
+    }
+
+    const displayThemeToggle = document.getElementById('displayThemeToggle');
+    if (displayThemeToggle) {
+        displayThemeToggle.addEventListener('click', function () {
+            const currentTheme = document.body.getAttribute('data-theme') === 'white' ? 'white' : 'black';
+            setDisplayTheme(currentTheme === 'white' ? 'black' : 'white');
+        });
+    }
+
+    loadCompactTalkers();
+    const compactTalkerSocket = io();
+    compactTalkerSocket.on('update_last_talker', addCompactTalker);
+</script>
+</body>
+</html>

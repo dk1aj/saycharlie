@@ -68,6 +68,13 @@
             box-shadow: none !important;
         }
 
+        body[data-theme] footer {
+            border-left: 0;
+            border-right: 0;
+            border-bottom: 0;
+            transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease;
+        }
+
         body[data-theme] footer a,
         body[data-theme] .text-blue-500,
         body[data-theme] .text-green-500,
@@ -75,9 +82,20 @@
             color: var(--muted) !important;
         }
 
+        body[data-theme] footer p {
+            color: var(--muted);
+        }
+
+        body[data-theme] footer p a {
+            color: #3b82f6 !important;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
         body[data-theme] #weather-emoji,
         body[data-theme] #lastTalker,
         body[data-theme] #talkerTimer,
+        body[data-theme] #compactTalkerList,
         body[data-theme] #directDtmf {
             background: var(--surface) !important;
             color: var(--text) !important;
@@ -125,7 +143,8 @@
         }
 
         body[data-theme] .homepage-primary,
-        body[data-theme] #homepageThemeToggle {
+        body[data-theme] #homepageThemeToggle,
+        body[data-theme] #display800Link {
             background: var(--accent) !important;
             color: var(--accent-contrast) !important;
             border: 1px solid var(--accent);
@@ -137,10 +156,23 @@
             border: 1px solid var(--accent);
         }
 
+        body[data-theme] #pttButton:disabled {
+            background: var(--surface-soft) !important;
+            color: var(--muted) !important;
+            border-color: var(--border);
+            cursor: not-allowed;
+            opacity: 0.65;
+            text-decoration: line-through;
+        }
+
         body[data-theme] #configurationButtons button:disabled {
             background: var(--surface-soft) !important;
             color: var(--muted) !important;
             border: 1px solid var(--border);
+        }
+
+        body[data-theme] #configurationButtons .highlighted-configuration {
+            border-color: var(--vu-green) !important;
         }
 
         body[data-theme] nav a {
@@ -196,6 +228,10 @@
             class="ml-2 bg-white text-black border border-black px-2 py-1 rounded text-xs sm:text-sm">
         🌙
     </button>
+    <a href="/display-800" id="display800Link" aria-label="Open 800 by 480 display view"
+       class="ml-1 inline-flex items-center bg-white text-black border border-black px-2 py-1 rounded text-xs sm:text-sm">
+        ▣
+    </a>
 {% endblock %}
 {% block content %}
     <script>
@@ -297,8 +333,8 @@
         <button id="pttButton"
                 class="text-white bg-gradient-to-r from-cyan-500 to-blue-500 hover:bg-gradient-to-bl focus:ring-4
                focus:outline-none focus:ring-cyan-300 dark:focus:ring-cyan-800 font-semibold rounded-lg text-lg px-5 py-2 text-center
-               active:bg-gradient-to-br active:scale-95 active:ring-blue-800"
-                onclick="togglePTT(this)">Switch PTT ON
+               active:bg-gradient-to-br active:scale-95 active:ring-blue-800 line-through opacity-60 cursor-not-allowed"
+                disabled aria-disabled="true">Switch PTT ON
         </button>
         <!-- Display category buttons -->
         {% for button in buttons %}
@@ -317,13 +353,22 @@
                         class="bg-[{{ button.color }}] text-[{{ button.fontColor }}] text-sm font-semibold py-1 px-3 rounded-md
                active:bg-opacity-75 active:scale-95 active:ring-2 active:ring-[{{ button.color }}] homepage-action">
                     <span class="block">{{ button.label }}</span>
-                    <span class="block text-xs font-normal opacity-80">{{ button.action }}</span>
                 </button>
             {% endif %}
         {% endfor %}
     </div>
-    <div class="mt-6">
-        <div id="configurationButtons" class="grid grid-cols-{{ columns }} gap-4"></div>
+    <div class="grid grid-cols-{{ columns }} gap-4 mt-4">
+        <div id="compactTalkerList" class="bg-gray-100 border border-gray-300 p-3 rounded-md">
+            <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="text-sm font-semibold">Recent Talkers</span>
+                <a href="/history" class="text-xs text-blue-500">All</a>
+            </div>
+            <div id="compactTalkerRows" class="space-y-1 text-xs">
+                <div class="text-gray-500">Loading...</div>
+            </div>
+        </div>
+        <div id="configurationButtons" class="grid grid-cols-{{ [columns - 1, 1]|max }} gap-4"
+             style="grid-column: span {{ [columns - 1, 1]|max }} / span {{ [columns - 1, 1]|max }};"></div>
     </div>
     <script>
         function togglePTT(button) {
@@ -389,12 +434,17 @@
                     container.innerHTML = '';
                     profiles.forEach(profile => {
                         const button = document.createElement('button');
+                        const label = getConfigurationLabel(profile.name);
+                        const highlightedConfigurations = ['CELLE', 'MISU', 'PARROT', 'ROLINK', 'TETRA'];
                         button.type = 'button';
-                        button.innerText = getConfigurationLabel(profile.name);
+                        button.innerText = label;
                         button.disabled = profile.isActive;
                         button.className = profile.isActive
-                            ? 'bg-gray-500 cursor-not-allowed text-white font-semibold text-sm py-1 px-3 rounded'
-                            : 'bg-green-600 hover:bg-green-800 text-white font-semibold text-sm py-1 px-3 rounded active:scale-95';
+                            ? 'bg-gray-500 cursor-not-allowed text-white font-semibold text-sm py-1 px-3 rounded border'
+                            : 'bg-green-600 hover:bg-green-800 text-white font-semibold text-sm py-1 px-3 rounded active:scale-95 border';
+                        if (highlightedConfigurations.includes(label.toUpperCase())) {
+                            button.classList.add('highlighted-configuration');
+                        }
                         button.addEventListener('click', function () {
                             activateConfigurationProfile(profile.name);
                         });
@@ -424,6 +474,105 @@
                 });
         }
 
+        let compactTalkers = [];
+
+        function formatCompactTalkerTime(value) {
+            if (!value) {
+                return '';
+            }
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) {
+                return value;
+            }
+            return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+        }
+
+        function getCompactTalkerKey(talker) {
+            return [
+                talker.stop_date_time || '',
+                talker.callsign || '',
+                talker.tg_number || ''
+            ].join('|');
+        }
+
+        function renderCompactTalkers(talkers) {
+            const rows = document.getElementById('compactTalkerRows');
+            if (!rows) {
+                return;
+            }
+            rows.innerHTML = '';
+            const visibleTalkers = talkers.slice(0, 5);
+            if (visibleTalkers.length === 0) {
+                rows.innerHTML = '<div class="text-gray-500">No talkers yet.</div>';
+                return;
+            }
+            visibleTalkers.forEach(function (talker) {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between gap-2 border-t border-gray-300 pt-1';
+                row.dataset.talkerKey = getCompactTalkerKey(talker);
+
+                const name = talker.name && talker.name !== 'Not available' ? talker.name : '';
+                const tgName = talker.tg_name ? ' ' + talker.tg_name : '';
+                const callsign = document.createElement('span');
+                callsign.className = 'font-semibold truncate';
+                callsign.textContent = talker.callsign || '###';
+
+                const displayName = document.createElement('span');
+                displayName.className = 'truncate opacity-80';
+                displayName.textContent = name;
+
+                const talkGroup = document.createElement('span');
+                talkGroup.className = 'shrink-0 opacity-80';
+                talkGroup.textContent = `TG ${talker.tg_number || '-'}${tgName}`;
+
+                const time = document.createElement('span');
+                time.className = 'shrink-0 opacity-70';
+                time.textContent = formatCompactTalkerTime(talker.stop_date_time);
+
+                row.append(callsign, displayName, talkGroup, time);
+                rows.appendChild(row);
+            });
+        }
+
+        async function loadCompactTalkers() {
+            try {
+                const response = await fetch('/api/talkers');
+                if (!response.ok) {
+                    throw new Error('Failed to load talkers');
+                }
+                const talkers = await response.json();
+                compactTalkers = talkers;
+                renderCompactTalkers(compactTalkers);
+            } catch (error) {
+                console.error('Error loading compact talkers:', error);
+            }
+        }
+
+        async function addCompactTalker(talker) {
+            if (talker.stopped !== true) {
+                return;
+            }
+            const name = typeof fetchName === 'function' ? await fetchName(talker.callsign) : '';
+            const tgName = typeof getGroupName === 'function' ? await getGroupName(talker.tg_number) : '';
+            const newTalker = {
+                ...talker,
+                name: name || 'Not available',
+                tg_name: tgName || ''
+            };
+            const rows = document.getElementById('compactTalkerRows');
+            if (!rows) {
+                return;
+            }
+            compactTalkers = [newTalker, ...compactTalkers]
+                .filter(function (item, index, items) {
+                    return items.findIndex(function (candidate) {
+                        return getCompactTalkerKey(candidate) === getCompactTalkerKey(item);
+                    }) === index;
+                })
+                .slice(0, 5);
+            renderCompactTalkers(compactTalkers);
+        }
+
         function setHomepageTheme(theme) {
             const resolvedTheme = theme === 'white' ? 'white' : 'black';
             document.body.setAttribute('data-theme', resolvedTheme);
@@ -450,6 +599,16 @@
             }
         }
 
+        function syncFooterTheme(theme) {
+            const resolvedTheme = theme === 'white' ? 'white' : 'black';
+            const colorScheme = resolvedTheme === 'white'
+                ? 'no-preference: light; light: light; dark: light;'
+                : 'no-preference: dark; light: dark; dark: dark;';
+            document.querySelectorAll('.footer-github-button').forEach(function (button) {
+                button.setAttribute('data-color-scheme', colorScheme);
+            });
+        }
+
         const homepageThemeToggle = document.getElementById('homepageThemeToggle');
         setHomepageTheme(loadHomepageTheme());
         if (homepageThemeToggle) {
@@ -457,11 +616,16 @@
                 const currentTheme = document.body.getAttribute('data-theme') === 'white' ? 'white' : 'black';
                 const nextTheme = currentTheme === 'white' ? 'black' : 'white';
                 setHomepageTheme(nextTheme);
+                syncFooterTheme(nextTheme);
                 saveHomepageTheme(nextTheme);
             });
         }
 
+        syncFooterTheme(loadHomepageTheme());
         loadConfigurationButtons();
+        loadCompactTalkers();
+        const compactTalkerSocket = io();
+        compactTalkerSocket.on('update_last_talker', addCompactTalker);
     </script>
     <script src="{{ url_for('static', filename='js/ham-api.js') }}"></script>
     <script src="{{ url_for('static', filename='js/talker.js') }}"></script>
