@@ -94,9 +94,10 @@ def dashboard():
     reflector_host = get_profile_hosts(active_profile)
     active_tg = get_profile_default_tg(active_profile)
 
-    return render_template('dashboard.html', buttons=settings_data['buttons'],
+    return render_template('display_800.html', buttons=settings_data['buttons'],
                            columns=settings_data['columns'], app_background=settings_data['app_background'],
-                           svx_active_profile=profile_name, svx_reflector_host=reflector_host, svx_active_tg=active_tg)
+                           svx_active_profile=profile_name, svx_reflector_host=reflector_host, svx_active_tg=active_tg,
+                           dynamic_screen=True)
 
 
 def display_800():

@@ -129,15 +129,20 @@
             opacity: 0.82;
         }
 
-        body[data-theme] .homepage-action,
-        body[data-theme] #configurationButtons button:not(:disabled) {
-            background: var(--surface) !important;
-            color: var(--text) !important;
-            border: 1px solid var(--border);
+        .homepage-action {
+            border: 1px solid rgba(0, 0, 0, 0.16);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+            box-sizing: border-box;
         }
 
-        body[data-theme] .homepage-action:hover,
-        body[data-theme] #configurationButtons button:not(:disabled):hover {
+        body[data-theme] .homepage-action {
+            background: var(--surface) !important;
+            color: var(--text) !important;
+            border-color: var(--border);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border), transparent 25%);
+        }
+
+        body[data-theme] .homepage-action:hover {
             background: var(--surface-soft) !important;
             border-color: var(--accent);
         }
@@ -171,8 +176,42 @@
             border: 1px solid var(--border);
         }
 
+        #configurationButtons {
+            gap: 5px !important;
+            grid-template-columns: repeat(auto-fill, 96px) !important;
+            justify-content: start;
+        }
+
+        #configurationButtons button {
+            min-width: 0;
+            width: 96px !important;
+            min-height: 28px !important;
+            height: 28px !important;
+            padding: 4px 6px !important;
+            background: #2f6f43;
+            color: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 5px !important;
+            font-size: 11px !important;
+            line-height: 1.2 !important;
+            font-weight: 700 !important;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        #configurationButtons button:active {
+            transform: scale(0.97);
+        }
+
+        #configurationButtons button:disabled {
+            cursor: not-allowed;
+            opacity: 0.72;
+        }
+
         body[data-theme] #configurationButtons .highlighted-configuration {
-            border-color: var(--vu-green) !important;
+            border-color: var(--accent) !important;
         }
 
         body[data-theme] nav a {
@@ -439,9 +478,7 @@
                         button.type = 'button';
                         button.innerText = label;
                         button.disabled = profile.isActive;
-                        button.className = profile.isActive
-                            ? 'bg-gray-500 cursor-not-allowed text-white font-semibold text-sm py-1 px-3 rounded border'
-                            : 'bg-green-600 hover:bg-green-800 text-white font-semibold text-sm py-1 px-3 rounded active:scale-95 border';
+                        button.className = 'configuration-button';
                         if (highlightedConfigurations.includes(label.toUpperCase())) {
                             button.classList.add('highlighted-configuration');
                         }

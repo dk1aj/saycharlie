@@ -4,6 +4,12 @@
 {% block heading %}📁 {{ svx_active_profile }}{% endblock %}
 {% block content %}
     <style>
+        .category-action {
+            border: 1px solid rgba(0, 0, 0, 0.16);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+            box-sizing: border-box;
+        }
+
         .last-pressed-command {
             background-image: repeating-linear-gradient(
                     45deg,
@@ -18,7 +24,7 @@
     <div class="grid grid-cols-{{ columns }} gap-4">
         {% for button in buttons_in_category %}
             <button onclick="markLastPressedCommand(this); sendDTMF('{{ button.action }}')"
-                    class="bg-[{{ button.color }}] text-[{{ button.fontColor }}] text-lg font-semibold p-2 rounded-md
+                    class="category-action bg-[{{ button.color }}] text-[{{ button.fontColor }}] text-lg font-semibold p-2 rounded-md
                active:bg-opacity-75 active:scale-95 active:ring-2 active:ring-[{{ button.color }}]">
                 <span class="block">{{ button.label }}</span>
                 <span class="block text-sm font-normal opacity-80">{{ button.action }}</span>
