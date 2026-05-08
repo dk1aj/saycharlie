@@ -94,6 +94,7 @@
 
         body[data-theme] #weather-emoji,
         body[data-theme] #lastTalker,
+        body[data-theme] #talkerTg,
         body[data-theme] #talkerTimer,
         body[data-theme] #compactTalkerList,
         body[data-theme] #directDtmf {
@@ -111,12 +112,21 @@
             color: var(--muted);
         }
 
-        body[data-theme] .homepage-meter-mark {
-            border-color: var(--border) !important;
+        .meter-scale-end {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
-        body[data-theme] .homepage-meter-limit {
-            border-color: var(--accent) !important;
+        .meter-peak-value {
+            min-width: 32px;
+            text-align: right;
+            color: var(--text);
+            font-weight: 700;
+        }
+
+        body[data-theme] .homepage-meter-mark {
+            border-color: var(--border) !important;
         }
 
         body[data-theme] .homepage-peak {
@@ -300,7 +310,7 @@
                     <span>-6</span>
                     <span>-3</span>
                     <span>0</span>
-                    <span>3</span>
+                    <span class="meter-scale-end"><span id="peakValueRX" class="meter-peak-value">-30.0</span></span>
                 </div>
                 <div class="absolute w-full h-full flex justify-between px-1">
                     <div class="homepage-meter-mark h-full border-r border-black"></div>
@@ -314,7 +324,6 @@
                     <div class="homepage-meter-mark h-full border-r border-black"></div>
                     <div class="homepage-meter-mark h-full border-r border-black"></div>
                     <div class="homepage-meter-mark h-full border-r border-black"></div>
-                    <div class="homepage-meter-limit h-full border-r-2 border-red-500"></div>
                 </div>
                 <div id="peakLevelRX"
                      class="homepage-peak absolute bg-yellow-700 opacity-80 h-full w-1.5 left-0 transition-all duration-100 ease-out"></div>
@@ -338,7 +347,7 @@
                     <span>-6</span>
                     <span>-3</span>
                     <span>0</span>
-                    <span>3</span>
+                    <span class="meter-scale-end"><span id="peakValueTX" class="meter-peak-value">-30.0</span></span>
 
                 </div>
                 <div class="absolute w-full h-full flex justify-between px-1">
@@ -353,7 +362,6 @@
                     <div class="homepage-meter-mark h-full border-r border-black"></div>
                     <div class="homepage-meter-mark h-full border-r border-black"></div>
                     <div class="homepage-meter-mark h-full border-r border-black"></div>
-                    <div class="homepage-meter-limit h-full border-r-2 border-red-500"></div>
                 </div>
                 <div id="peakLevelTX"
                      class="homepage-peak absolute bg-yellow-700 opacity-80 h-full w-1.5 left-0 transition-all duration-100 ease-out"></div>
@@ -364,7 +372,12 @@
     </div>
     <div class="grid grid-cols-{{ columns }} gap-4">
         <div id="lastTalker" class="bg-gray-100 border border-gray-300 p-3 rounded-md">Last Talker: Loading...</div>
-        <div id="talkerTimer" class="bg-gray-100 border border-gray-300 p-3 rounded-md">Talk Duration: 0 min 0 sec</div>
+        <div id="talkerTg" class="bg-gray-100 border border-gray-300 p-3 rounded-md flex flex-col items-center justify-center text-center">
+            <span style="font-size: 0.75em; opacity: 0.75;">TG#:</span> -
+        </div>
+        <div id="talkerTimer" class="bg-gray-100 border border-gray-300 p-3 rounded-md flex flex-col items-center justify-center text-center">
+            <span style="font-size: 0.75em; opacity: 0.75;">Duration:</span> 0:00
+        </div>
         <form class="flex" onsubmit="event.preventDefault(); sendDTMF(document.getElementById('directDtmf').value); document.getElementById('directDtmf').value = '';">
             <input required id="directDtmf" class="flex-grow p-4 bg-gray-100 border border-gray-300 rounded-l-md focus:outline-none focus:ring focus:ring-blue-500" placeholder="DTMF tone">
             <button type="submit" class="homepage-primary bg-blue-500 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-l-none rounded-r-md active:bg-blue-800 active:scale-95 active:ring-4 active:ring-blue-800">Send</button>
@@ -524,6 +537,16 @@
             return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
         }
 
+        function formatCompactTalkerDuration(value) {
+            const duration = Number(value || 0);
+            if (!Number.isFinite(duration) || duration <= 0) {
+                return '0:00';
+            }
+            const minutes = Math.floor(duration / 60);
+            const seconds = Math.floor(duration % 60);
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
         function getCompactTalkerKey(talker) {
             return [
                 talker.stop_date_time || '',
@@ -543,30 +566,38 @@
                 rows.innerHTML = '<div class="text-gray-500">No talkers yet.</div>';
                 return;
             }
+            const header = document.createElement('div');
+            header.className = 'grid gap-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500';
+            header.style.gridTemplateColumns = 'minmax(0, 1.2fr) 46px 64px 54px';
+            header.innerHTML = '<span>Call</span><span>TG</span><span>Duration</span><span>Time</span>';
+            rows.appendChild(header);
+
             visibleTalkers.forEach(function (talker) {
                 const row = document.createElement('div');
-                row.className = 'flex items-center justify-between gap-2 border-t border-gray-300 pt-1';
+                row.className = 'grid items-center gap-2 border-t border-gray-300 pt-1';
+                row.style.gridTemplateColumns = 'minmax(0, 1.2fr) 46px 64px 54px';
                 row.dataset.talkerKey = getCompactTalkerKey(talker);
 
-                const name = talker.name && talker.name !== 'Not available' ? talker.name : '';
-                const tgName = talker.tg_name ? ' ' + talker.tg_name : '';
                 const callsign = document.createElement('span');
                 callsign.className = 'font-semibold truncate';
                 callsign.textContent = talker.callsign || '###';
 
-                const displayName = document.createElement('span');
-                displayName.className = 'truncate opacity-80';
-                displayName.textContent = name;
-
                 const talkGroup = document.createElement('span');
                 talkGroup.className = 'shrink-0 opacity-80';
-                talkGroup.textContent = `TG ${talker.tg_number || '-'}${tgName}`;
+                talkGroup.textContent = talker.tg_number || '-';
+                if (talker.tg_name) {
+                    talkGroup.title = talker.tg_name;
+                }
+
+                const duration = document.createElement('span');
+                duration.className = 'shrink-0 opacity-80';
+                duration.textContent = formatCompactTalkerDuration(talker.duration);
 
                 const time = document.createElement('span');
                 time.className = 'shrink-0 opacity-70';
                 time.textContent = formatCompactTalkerTime(talker.stop_date_time);
 
-                row.append(callsign, displayName, talkGroup, time);
+                row.append(callsign, talkGroup, duration, time);
                 rows.appendChild(row);
             });
         }

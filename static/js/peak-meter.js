@@ -30,6 +30,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const peakLevelBarRX = document.getElementById('peakLevelRX');
     const volumeLevelTX = document.getElementById('volumeLevelTX');
     const peakLevelBarTX = document.getElementById('peakLevelTX');
+    const peakValueRX = document.getElementById('peakValueRX');
+    const peakValueTX = document.getElementById('peakValueTX');
     const minDb = -30;
     const maxDb = 3;
     const peakHoldMs = 1000;
@@ -46,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function () {
             peakLevelRX = Math.max(peakLevelRX, minDb);
             lastDecayRX = now;
         }
-        updatePeakBar(peakLevelBarRX, peakLevelRX);
+        updatePeakBar(peakLevelBarRX, peakLevelRX, peakValueRX);
 
         // Update peak level decay for TX
         if (now - lastPeakTX >= peakHoldMs) {
@@ -56,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
             peakLevelTX = Math.max(peakLevelTX, minDb);
             lastDecayTX = now;
         }
-        updatePeakBar(peakLevelBarTX, peakLevelTX);
+        updatePeakBar(peakLevelBarTX, peakLevelTX, peakValueTX);
 
         // Call this function again on the next animation frame
         requestAnimationFrame(updateLevels);
@@ -82,23 +84,27 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function updatePeakBar(peakLevelBar, level) {
+    function updatePeakBar(peakLevelBar, level, peakValue) {
         let peakPercentage = ((level - minDb) / (maxDb - minDb)) * 100;
         peakPercentage = Math.max(0, Math.min(peakPercentage, 100));
         peakLevelBar.style.left = `${peakPercentage.toFixed(2)}%`;
         peakLevelBar.style.backgroundColor = getPeakColorForLevel(level);
         peakLevelBar.style.color = getPeakColorForLevel(level);
+        if (peakValue) {
+            peakValue.textContent = level.toFixed(1);
+            peakValue.style.color = getPeakColorForLevel(level);
+        }
     }
 
     socket.on('audio_level_rx', function (data) {
-        updateLevel(data, volumeLevelRX, peakLevelBarRX, 'RX');
+        updateLevel(data, volumeLevelRX, peakLevelBarRX, peakValueRX, 'RX');
     });
 
     socket.on('audio_level_tx', function (data) {
-        updateLevel(data, volumeLevelTX, peakLevelBarTX, 'TX');
+        updateLevel(data, volumeLevelTX, peakLevelBarTX, peakValueTX, 'TX');
     });
 
-    function updateLevel(data, volumeLevel, peakLevelBar, type) {
+    function updateLevel(data, volumeLevel, peakLevelBar, peakValue, type) {
         const level = parseFloat(data.level);
         let percentage = ((level - minDb) / (maxDb - minDb)) * 100;
         percentage = Math.max(0, Math.min(percentage, 100));
@@ -110,14 +116,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 peakLevelRX = level;
                 lastPeakRX = Date.now();
                 lastDecayRX = Date.now();
-                updatePeakBar(peakLevelBar, peakLevelRX);
+                updatePeakBar(peakLevelBar, peakLevelRX, peakValue);
             }
         } else if (type === 'TX') {
             if (level > peakLevelTX) {
                 peakLevelTX = level;
                 lastPeakTX = Date.now();
                 lastDecayTX = Date.now();
-                updatePeakBar(peakLevelBar, peakLevelTX);
+                updatePeakBar(peakLevelBar, peakLevelTX, peakValue);
             }
         }
     }

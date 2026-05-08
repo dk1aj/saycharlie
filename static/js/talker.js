@@ -24,6 +24,7 @@ let timerInterval = null;
 let startTime = null;
 const timerElement = document.getElementById('talkerTimer');  // Declare once, use throughout
 const lastTalkerElement = document.getElementById('lastTalker');
+const talkerTgElement = document.getElementById('talkerTg');
 
 socket.on('connect', () => {
     console.log('Connected to server');
@@ -37,28 +38,33 @@ socket.on('update_last_talker', async (talker) => {
 
         if (!talker['stopped']) {
             const groupName = await getGroupName(talker['tg_number']);
-            const tgDisplay = groupName ? ` - TG #${talker['tg_number']} ${groupName}` : ` - TG #${talker['tg_number']}`;
-            const currentDisplayName = document.createElement('strong');
-            currentDisplayName.innerText = name || '###';
             lastTalkerElement.replaceChildren(
-                document.createTextNode("Current Talker: " + talker_callsign + " "),
-                currentDisplayName,
-                document.createTextNode(tgDisplay)
+                createTalkerLabel("Current Talker:"),
+                document.createTextNode(" "),
+                createTalkerDetails(talker_callsign, name)
             );
+            renderTalkGroup(talker['tg_number'], groupName);
             startTime = parseDateTime(talker['start_date_time']).getTime();
             startTimer();
         } else {
-            const previousDisplayName = name ? ` ${name}` : ' ###';
             const groupName = await getGroupName(talker['tg_number']);
-            const tgDisplay = groupName ? ` - TG #${talker['tg_number']} ${groupName}` : ` - TG #${talker['tg_number']}`;
-            lastTalkerElement.innerText = "Prev Talker: " + talker_callsign + previousDisplayName + tgDisplay;
+            lastTalkerElement.replaceChildren(
+                createTalkerLabel("Prev Talker:"),
+                document.createTextNode(" "),
+                createTalkerDetails(talker_callsign, name)
+            );
+            renderTalkGroup(talker['tg_number'], groupName);
             stopTimer();
             displayTalkDuration(talker.duration || 0);  // Display duration or reset if undefined
         }
     } catch (error) {
         console.error('Failed to fetch name:', error);
         // Handle the error by updating the UI appropriately
-        lastTalkerElement.innerText = talker['stopped'] ? "Prev Talker: " + talker_callsign + " (Failed to fetch name)" : "Current Talker: " + talker_callsign + " (Failed to fetch name)";
+        lastTalkerElement.replaceChildren(
+            createTalkerLabel(talker['stopped'] ? "Prev Talker:" : "Current Talker:"),
+            document.createTextNode(" " + talker_callsign + " (Failed to fetch name)")
+        );
+        renderTalkGroup(talker['tg_number'], '');
         if (!talker['stopped']) {
             startTimer();
         } else {
@@ -67,6 +73,52 @@ socket.on('update_last_talker', async (talker) => {
         }
     }
 });
+
+function createTalkerLabel(text) {
+    const label = document.createElement('span');
+    label.style.fontSize = '0.75em';
+    label.style.opacity = '0.75';
+    label.textContent = text;
+    return label;
+}
+
+function createTalkerDetails(callsign, name) {
+    const details = document.createElement('span');
+    details.style.display = 'inline-flex';
+    details.style.flexDirection = 'column';
+    details.style.verticalAlign = 'top';
+
+    const callLine = document.createElement('span');
+    callLine.textContent = callsign;
+
+    const nameLine = createTalkerLabel(name || '###');
+    nameLine.style.display = 'block';
+
+    details.append(callLine, nameLine);
+    return details;
+}
+
+function renderTalkGroup(tgNumber, groupName) {
+    if (!talkerTgElement) {
+        return;
+    }
+    const tgValue = document.createElement('span');
+    tgValue.textContent = tgNumber || '-';
+
+    const children = [
+        createTalkerLabel("TG#:"),
+        document.createTextNode(" "),
+        tgValue
+    ];
+
+    if (groupName) {
+        const groupNameLine = createTalkerLabel(groupName);
+        groupNameLine.style.display = 'block';
+        children.push(groupNameLine);
+    }
+
+    talkerTgElement.replaceChildren(...children);
+}
 
 function startTimer() {
     if (timerInterval) clearInterval(timerInterval);
@@ -82,17 +134,28 @@ function stopTimer() {
 function updateTimerDisplay(elapsedTime) {
     let minutes = Math.floor(elapsedTime / 60000);
     let seconds = Math.floor((elapsedTime % 60000) / 1000);
-    timerElement.innerText = "Talk Duration: " + minutes + " min " + seconds + " sec";
+    renderDuration(formatDuration(minutes, seconds));
 }
 
 function displayTalkDuration(duration) {
     if (!duration) {
-        timerElement.innerText = "No talk currently or data missing.";
+        renderDuration("0:00");
     } else {
         let minutes = Math.floor(duration / 60);
         let seconds = Math.floor(duration % 60);
-        timerElement.innerText = "Duration: " + minutes + " min " + seconds + " sec";
+        renderDuration(formatDuration(minutes, seconds));
     }
+}
+
+function renderDuration(durationText) {
+    timerElement.replaceChildren(
+        createTalkerLabel("Duration:"),
+        document.createTextNode(durationText)
+    );
+}
+
+function formatDuration(minutes, seconds) {
+    return minutes + ":" + seconds.toString().padStart(2, "0");
 }
 
 function parseDateTime(dateTimeStr) {

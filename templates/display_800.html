@@ -189,14 +189,22 @@
             line-height: 19px;
         }
 
+        .meter-scale-end {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .meter-peak-value {
+            min-width: 30px;
+            text-align: right;
+            color: var(--text);
+            font-weight: 700;
+        }
+
         .meter-mark {
             height: 100%;
             border-right: 1px solid var(--border);
-        }
-
-        .meter-limit {
-            height: 100%;
-            border-right: 2px solid var(--accent);
         }
 
         .peak {
@@ -244,9 +252,19 @@
 
         .status-grid {
             display: grid;
-            grid-template-columns: 1fr 150px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 8px;
         }
+
+        #talkerTg,
+        #talkerTimer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
 
         .status-card {
             min-height: 50px;
@@ -429,10 +447,17 @@
 
         .talker-row {
             display: grid;
-            grid-template-columns: 78px minmax(0, 1fr) 46px;
+            grid-template-columns: minmax(0, 1fr) 34px 48px 40px;
             gap: 5px;
             padding-top: 4px;
             border-top: 1px solid var(--border);
+        }
+
+        .talker-row-head {
+            color: var(--muted);
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
         }
 
         .truncate {
@@ -460,7 +485,7 @@
         }
 
         .screen.dynamic-screen .status-grid {
-            grid-template-columns: minmax(0, 1fr) clamp(150px, 18vw, 240px);
+            grid-template-columns: repeat(3, minmax(0, 1fr));
         }
 
         .screen.dynamic-screen .button-grid {
@@ -560,12 +585,13 @@
             <span class="meter-label">RX</span>
             <div class="meter">
                 <div class="meter-scale">
-                    <span>-30</span><span>-24</span><span>-18</span><span>-12</span><span>-6</span><span>0</span><span>3</span>
+                    <span>-30</span><span>-27</span><span>-24</span><span>-21</span><span>-18</span><span>-15</span><span>-12</span><span>-9</span><span>-6</span><span>-3</span><span>0</span><span class="meter-scale-end"><span id="peakValueRX" class="meter-peak-value">-30.0</span></span>
                 </div>
                 <div class="meter-marks">
                     <div class="meter-mark"></div><div class="meter-mark"></div><div class="meter-mark"></div>
                     <div class="meter-mark"></div><div class="meter-mark"></div><div class="meter-mark"></div>
-                    <div class="meter-limit"></div>
+                    <div class="meter-mark"></div><div class="meter-mark"></div><div class="meter-mark"></div>
+                    <div class="meter-mark"></div><div class="meter-mark"></div>
                 </div>
                 <div id="peakLevelRX" class="peak"></div>
                 <div id="volumeLevelRX" class="volume"></div>
@@ -575,12 +601,13 @@
             <span class="meter-label">TX</span>
             <div class="meter">
                 <div class="meter-scale">
-                    <span>-30</span><span>-24</span><span>-18</span><span>-12</span><span>-6</span><span>0</span><span>3</span>
+                    <span>-30</span><span>-27</span><span>-24</span><span>-21</span><span>-18</span><span>-15</span><span>-12</span><span>-9</span><span>-6</span><span>-3</span><span>0</span><span class="meter-scale-end"><span id="peakValueTX" class="meter-peak-value">-30.0</span></span>
                 </div>
                 <div class="meter-marks">
                     <div class="meter-mark"></div><div class="meter-mark"></div><div class="meter-mark"></div>
                     <div class="meter-mark"></div><div class="meter-mark"></div><div class="meter-mark"></div>
-                    <div class="meter-limit"></div>
+                    <div class="meter-mark"></div><div class="meter-mark"></div><div class="meter-mark"></div>
+                    <div class="meter-mark"></div><div class="meter-mark"></div>
                 </div>
                 <div id="peakLevelTX" class="peak"></div>
                 <div id="volumeLevelTX" class="volume"></div>
@@ -595,9 +622,13 @@
                     <span class="status-label">Talker</span>
                     Loading...
                 </div>
+                <div id="talkerTg" class="status-card">
+                    <span class="status-label">TG#</span>
+                    -
+                </div>
                 <div id="talkerTimer" class="status-card">
                     <span class="status-label">Duration</span>
-                    0 min 0 sec
+                    0:00
                 </div>
             </div>
 
@@ -764,6 +795,16 @@
         return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
     }
 
+    function formatCompactTalkerDuration(value) {
+        const duration = Number(value || 0);
+        if (!Number.isFinite(duration) || duration <= 0) {
+            return '0:00';
+        }
+        const minutes = Math.floor(duration / 60);
+        const seconds = Math.floor(duration % 60);
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
     function getCompactTalkerKey(talker) {
         return [
             talker.stop_date_time || '',
@@ -783,6 +824,11 @@
             rows.innerHTML = '<div class="muted">No talkers yet.</div>';
             return;
         }
+        const header = document.createElement('div');
+        header.className = 'talker-row talker-row-head';
+        header.innerHTML = '<span>Call</span><span>TG</span><span>Duration</span><span>Time</span>';
+        rows.appendChild(header);
+
         visibleTalkers.forEach(function (talker) {
             const row = document.createElement('div');
             row.className = 'talker-row';
@@ -794,13 +840,20 @@
 
             const talkGroup = document.createElement('span');
             talkGroup.className = 'truncate muted';
-            talkGroup.textContent = `TG ${talker.tg_number || '-'}${talker.tg_name ? ' ' + talker.tg_name : ''}`;
+            talkGroup.textContent = talker.tg_number || '-';
+            if (talker.tg_name) {
+                talkGroup.title = talker.tg_name;
+            }
+
+            const duration = document.createElement('span');
+            duration.className = 'muted';
+            duration.textContent = formatCompactTalkerDuration(talker.duration);
 
             const time = document.createElement('span');
             time.className = 'muted';
             time.textContent = formatCompactTalkerTime(talker.stop_date_time);
 
-            row.append(callsign, talkGroup, time);
+            row.append(callsign, talkGroup, duration, time);
             rows.appendChild(row);
         });
     }
