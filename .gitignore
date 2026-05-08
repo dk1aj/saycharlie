@@ -2,5 +2,4 @@
 logs
 config.json
 callsign_cache.json
-profile-uploads/
 *.conf
